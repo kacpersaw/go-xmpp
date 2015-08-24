@@ -172,7 +172,12 @@ func (o Options) NewClient() (*Client, error) {
 		if o.TLSConfig != nil {
 			tlsconn = tls.Client(c, o.TLSConfig)
 		} else {
-			DefaultConfig.ServerName = strings.Split(o.User, "@")[1]
+			//from https://github.com/dullgiulio/go-xmpp
+			usrServ := strings.Split(o.User, "@")
+			if len(usrServ) != 2 {
+				return nil, errors.New("xmpp: invalid username (want user@domain): " + o.User)
+			}
+			DefaultConfig.ServerName = usrServ[1]
 			tlsconn = tls.Client(c, &DefaultConfig)
 		}
 		if err = tlsconn.Handshake(); err != nil {
@@ -372,15 +377,17 @@ func (c *Client) init(o *Options) error {
 
 				fmt.Fprintf(c.conn, "<response xmlns='%s'>%s</response>\n", nsSASL, base64.StdEncoding.EncodeToString([]byte(message)))
 
-				var rspauth saslRspAuth
-				if err = c.p.DecodeElement(&rspauth, nil); err != nil {
-					return errors.New("unmarshal <challenge>: " + err.Error())
-				}
-				b, err = base64.StdEncoding.DecodeString(string(rspauth))
-				if err != nil {
-					return err
-				}
-				fmt.Fprintf(c.conn, "<response xmlns='%s'/>\n", nsSASL)
+				//from https://github.com/dullgiulio/go-xmpp
+				/*
+					var rspauth saslRspAuth
+					if err = c.p.DecodeElement(&rspauth, nil); err != nil {
+						return errors.New("unmarshal <challenge>: " + err.Error())
+					}
+					b, err = base64.StdEncoding.DecodeString(string(rspauth))
+					if err != nil {
+						return err
+					}
+					fmt.Fprintf(c.conn, "<response xmlns='%s'/>\n", nsSASL) */
 				break
 			}
 		}
